@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Familie</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Familie">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f2; --card:#ffffff; --text:#1c1c1e; --muted:#7a7a80; --line:#e6e4df;
+  --accent:#2f6fed; --accent-soft:#e6eefc; --danger:#d64545; --ok:#2e9e5b;
+  --tab:#ffffffee; --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 20px -8px rgba(0,0,0,.12);
+  --radius:16px; --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+  --uns:#e0559c; --gil:#2f9fd6; --beide:#8b5cf6; --oma:#e0a020; --schule:#2e9e5b; --logo:#c9a800;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#111214; --card:#1c1d20; --text:#f2f2f4; --muted:#8e8e95; --line:#2c2d31;
+    --accent:#5b8cff; --accent-soft:#1d2a47; --tab:#161719ee; --shadow:0 1px 2px rgba(0,0,0,.4); }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+body{display:flex;flex-direction:column;min-height:100dvh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+input,textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;outline:none;-webkit-appearance:none;appearance:none;font-size:16px}
+input:focus,textarea:focus{border-color:var(--accent)}
+label.f{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+h1{font-size:28px;letter-spacing:-.4px;margin:0;font-weight:700}
+h2{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:20px 0 8px;font-weight:600}
+.hidden{display:none!important}
+header.top{padding:calc(var(--sat) + 14px) 18px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--bg);z-index:5}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;padding-bottom:6px}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.status.demo i{background:#e0a020}.status.off i{background:var(--danger)}
+main{flex:1;padding:0 16px calc(var(--sab) + 100px)}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.row{display:flex;align-items:center;gap:10px}.grow{flex:1;min-width:0}.muted{color:var(--muted)}.small{font-size:13px}
+.btn{background:var(--accent);color:#fff;border-radius:12px;padding:13px 18px;font-weight:600;width:100%;font-size:16px}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}.btn.danger{background:transparent;color:var(--danger)}.btn:active{opacity:.75}
+.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:22px;color:var(--accent);background:var(--card);box-shadow:var(--shadow)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;white-space:nowrap}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.fab{position:fixed;right:18px;bottom:calc(var(--sab) + 84px);width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:30px;display:grid;place-items:center;box-shadow:0 8px 24px -6px rgba(47,111,237,.6);z-index:6;line-height:1}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;padding:8px 8px calc(var(--sab) + 8px);background:var(--tab);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);border-top:1px solid var(--line);z-index:7}
+nav.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);padding:4px 0;font-weight:500}
+nav.tabs button svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button.on{color:var(--accent)}
+/* Wochen-Navigation */
+.wk{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
+.wk .c{text-align:center}.wk b{font-size:18px}.wk .today{font-size:12px;color:var(--accent);font-weight:600}
+/* Kalender-Woche */
+.day{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.day:last-child{border-bottom:0}
+.day .dn{width:44px;flex:none;text-align:center;padding-top:2px}
+.day .dn b{display:block;font-size:11px;color:var(--muted);text-transform:uppercase}
+.day .dn span{font-size:22px;font-weight:600;line-height:1.1}
+.day.today .dn span{color:#fff;background:var(--accent);border-radius:50%;width:34px;height:34px;display:inline-grid;place-items:center;font-size:18px}
+.day.past{opacity:.55}
+.liam{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.liam span{font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px;color:#fff;line-height:1.3}
+.liam .note{background:var(--line);color:var(--text);font-weight:500}
+.ev{display:flex;gap:8px;align-items:flex-start;padding:5px 0}
+.ev .bar{width:4px;border-radius:2px;align-self:stretch;flex:none;min-height:18px}
+.ev .t{font-size:13px;color:var(--muted);width:44px;flex:none;font-variant-numeric:tabular-nums;padding-top:1px}
+.ev .title{font-weight:600;font-size:15px}
+.ev .sub{font-size:12px;color:var(--muted)}
+.addday{color:var(--accent);font-size:13px;font-weight:600;padding:3px 0;opacity:.85}
+.empty{color:var(--muted);text-align:center;padding:26px 10px;font-size:14px}
+/* Listen */
+.addrow{display:flex;gap:8px;margin:4px 0 10px}.addrow input{flex:1}
+.addrow button{background:var(--accent);color:#fff;border-radius:12px;width:48px;flex:none;font-size:24px}
+.item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.check{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:#fff;font-size:15px}
+.item.done .check{background:var(--ok);border-color:var(--ok)}
+.item.done .name{text-decoration:line-through;color:var(--muted)}
+.item .name{flex:1;padding:2px 0}
+.item .by{font-size:12px;color:var(--muted)}
+/* Sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.show{opacity:1;pointer-events:auto}
+.sheet{background:var(--bg);width:100%;max-height:92dvh;overflow:auto;border-radius:22px 22px 0 0;padding:10px 18px calc(var(--sab) + 20px);transform:translateY(30px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.overlay.show .sheet{transform:none}
+.sheet .handle{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.sheet h3{margin:0 0 14px;font-size:20px}
+.sheet .actions{display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.list-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);text-align:left}
+.list-btn:first-child{border-radius:var(--radius) var(--radius) 0 0}.list-btn:last-child{border-bottom:0;border-radius:0 0 var(--radius) var(--radius)}
+.list-btn:only-child{border-radius:var(--radius)}.list-btn .chev{color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 150px);transform:translateX(-50%) translateY(10px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;z-index:30;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}.swatches button{width:30px;height:30px;border-radius:50%;border:3px solid transparent}.swatches button.on{border-color:var(--text)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin:10px 4px 0}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<header class="top"><h1 id="title">Kalender</h1><div class="status" id="status"><i></i><span>…</span></div></header>
+<main id="main"></main>
+<button class="fab" id="fab" aria-label="Hinzufügen">+</button>
+<nav class="tabs" id="tabs">
+  <button data-tab="cal" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalender</button>
+  <button data-tab="shop"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Einkauf</button>
+  <button data-tab="meals"><svg viewBox="0 0 24 24"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 0-3 3-3 6v3h3v9"/></svg>Essen</button>
+  <button data-tab="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mehr</button>
+</nav>
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+/* ========================= Helpers ========================= */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = (s='') => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const today = () => ymd(new Date());
+const WD = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+const WDL = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+const MON = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const mondayOf = d => { const x=new Date(d); x.setHours(0,0,0,0); return addDays(x, -((x.getDay()+6)%7)); };
+const isoWeek = d => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()+3-((t.getDay()+6)%7)); const w1=new Date(t.getFullYear(),0,4); return {year:t.getFullYear(), week:1+Math.round(((t-w1)/86400000-3+((w1.getDay()+6)%7))/7)}; };
+const weekKey = d => { const w=isoWeek(d); return `${w.year}-W${pad(w.week)}`; };
+const fmtLong = s => { const d=parse(s); return `${WDL[(d.getDay()+6)%7]}, ${d.getDate()}. ${MON[d.getMonth()]}`; };
+const toast = (msg) => { const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2000); };
+// Planungswoche für Einkauf/Essen: ab Sonntag zählt schon die kommende Woche
+const planWeekStart = () => { const n=new Date(); return n.getDay()===0 ? mondayOf(addDays(n,1)) : mondayOf(n); };
+
+const DEFAULT_PERSONS = [ {id:'thomas',name:'Thomas',color:'#2f6fed'}, {id:'swantje',name:'Swantje',color:'#e0559c'}, {id:'liam',name:'Liam',color:'#2e9e5b'} ];
+const COLORS = ['#2f6fed','#e0559c','#2e9e5b','#e08a20','#8b5cf6','#14b8a6','#ef4444','#64748b'];
+const WHO = { uns:'bei uns', gil:'bei Gil', beide:'bei beiden', oma:'bei Oma & Opa' };
+
+/* ========================= Store ========================= */
+class LocalStore {
+  constructor(){ try { this.data = JSON.parse(localStorage.getItem('famapp2')||'{}'); } catch { this.data = {}; } this.subs={}; this.kind='demo'; }
+  save(){ try { localStorage.setItem('famapp2', JSON.stringify(this.data)); } catch {} }
+  list(c){ return Object.entries(this.data[c]||{}).map(([id,d])=>({id,...d})); }
+  emit(c){ (this.subs[c]||[]).forEach(cb=>cb(this.list(c))); }
+  watch(c, cb){ (this.subs[c] ||= []).push(cb); cb(this.list(c)); }
+  async set(c,id,d){ (this.data[c] ||= {})[id] = {...d}; this.save(); this.emit(c); }
+  async update(c,id,p){ if(!this.data[c]?.[id]) return this.set(c,id,p); Object.assign(this.data[c][id], p); this.save(); this.emit(c); }
+  async remove(c,id){ if(this.data[c]) delete this.data[c][id]; this.save(); this.emit(c); }
+}
+class FireStore {
+  constructor(app, db, fs){ this.app=app; this.db=db; this.fs=fs; this.kind='cloud'; }
+  watch(c, cb){ this.fs.onSnapshot(this.fs.collection(this.db,c), s => cb(s.docs.map(d=>({id:d.id,...d.data()}))), e => { console.error(e); setStatus('off','Fehler: '+e.code); }); }
+  async set(c,id,d){ return this.fs.setDoc(this.fs.doc(this.db,c,id), d); }
+  async update(c,id,p){ return this.fs.setDoc(this.fs.doc(this.db,c,id), p, {merge:true}); }
+  async remove(c,id){ return this.fs.deleteDoc(this.fs.doc(this.db,c,id)); }
+}
+function setStatus(kind, text){ const s=$('#status'); s.className='status '+kind; s.querySelector('span').textContent=text; }
+const FB_BASE = 'https://www.gstatic.com/firebasejs/10.12.4/';
+async function initStore(){
+  const cfg = window.FAMILY_FIREBASE_CONFIG || {};
+  if (!cfg.apiKey) { setStatus('demo','Demo – nur dieses Gerät'); return new LocalStore(); }
+  try {
+    const [{initializeApp}, fs] = await Promise.all([import(FB_BASE+'firebase-app.js'), import(FB_BASE+'firebase-firestore.js')]);
+    const app = initializeApp(cfg);
+    const db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }) });
+    const upd = () => setStatus(navigator.onLine?'ok':'off', navigator.onLine?'Synchronisiert':'Offline – wird später gesynct');
+    addEventListener('online',upd); addEventListener('offline',upd); upd();
+    return new FireStore(app, db, fs);
+  } catch (e) { console.error(e); setStatus('off','Firebase nicht erreichbar – lokal'); return new LocalStore(); }
+}
+
+/* ========================= State ========================= */
+const S = { tab:'cal', events:[], shopping:[], meals:[], settings:null, liam:{}, liamCloud:[],
+  calWeek: mondayOf(new Date()), planWeek: planWeekStart() };
+let store;
+const persons = () => S.settings?.persons?.length ? S.settings.persons : DEFAULT_PERSONS;
+const person = id => persons().find(p=>p.id===id);
+const liamFor = k => (S.liamCloud.find(x=>x.id===k)) || S.liam[k] || null;
+
+/* ========================= Sheet ========================= */
+const overlay=$('#overlay'), sheet=$('#sheet');
+function openSheet(html){ sheet.innerHTML=`<div class="handle"></div>${html}`; overlay.classList.add('show'); return sheet; }
+function closeSheet(){ overlay.classList.remove('show'); }
+overlay.addEventListener('click', e => { if (e.target===overlay) closeSheet(); });
+const personChips = (sel, withAll=true) => `<div class="chips" id="pchips">${[...(withAll?[{id:'all',name:'Alle',color:'#888'}]:[]),...persons()].map(p=>`<button class="chip ${p.id===sel?'on':''}" data-p="${p.id}"><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</button>`).join('')}</div>`;
+function bindChips(root, key, onChange){ root.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{ root.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); onChange(b.dataset[key]); })); }
+const weekNav = (start, idPrefix, sub) => { const w=isoWeek(start), end=addDays(start,6), cur=ymd(start)===ymd(mondayOf(new Date()));
+  return `<div class="wk"><button class="icon-btn" id="${idPrefix}Prev">‹</button><div class="c"><b>KW ${w.week}</b><div class="small muted">${start.getDate()}.${start.getMonth()+1}. – ${end.getDate()}.${end.getMonth()+1}.${end.getFullYear()}${sub||''}</div>${cur?'':`<button class="today" id="${idPrefix}Now">Zur aktuellen Woche</button>`}</div><button class="icon-btn" id="${idPrefix}Next">›</button></div>`; };
+
+/* ========================= Kalender (Woche) ========================= */
+function liamChips(k){
+  const L=liamFor(k); if(!L) return '';
+  const out=[];
+  const c=L.custody||[];
+  if (c.length===1) out.push(`<span style="background:var(--${c[0].who})">Liam ${WHO[c[0].who]||c[0].who}</span>`);
+  else if (c.length>1) out.push(c.map((s,i)=>`<span style="background:var(--${s.who})">${i===0?'Liam ':'ab '+s.from+' Uhr '}${WHO[s.who]||s.who}</span>`).join(''));
+  for (const s of (L.school||[])) out.push(`<span style="background:var(--schule)">Schule ${s.from}–${s.to} Uhr</span>`);
+  for (const s of (L.logo||[])) out.push(`<span style="background:var(--logo)">Logopädie ${s.from} Uhr</span>`);
+  if (L.note) out.push(`<span class="note">${esc(L.note)}</span>`);
+  return `<div class="liam">${out.join('')}</div>`;
+}
+function renderCal(m){
+  const ws=S.calWeek, tod=today();
+  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
+  const sortE=(a,b)=>((a.time||'')+a.title).localeCompare((b.time||'')+b.title);
+  m.innerHTML = weekNav(ws,'cal') + `<div class="card" style="padding:2px 14px">${days.map(d=>{ const k=ymd(d);
+    const evs=S.events.filter(e=>k>=e.date && k<=(e.endDate||e.date)).sort(sortE);
+    return `<div class="day ${k===tod?'today':''} ${k<tod?'past':''}"><div class="dn"><b>${WD[(d.getDay()+6)%7]}</b><span>${d.getDate()}</span></div><div class="grow">
+      ${liamChips(k)}
+      ${evs.map(e=>`<div class="ev" data-id="${e.id}"><div class="bar" style="background:${person(e.person)?.color||'#999'}"></div><div class="t">${e.time?esc(e.time):'ganzt.'}</div><div class="grow"><div class="title">${esc(e.title)}</div>${(e.person!=='all'||e.note||(e.endDate&&e.endDate!==e.date))?`<div class="sub">${e.person==='all'?'':esc(person(e.person)?.name||'')}${e.endDate&&e.endDate!==e.date?` · bis ${parse(e.endDate).getDate()}.${parse(e.endDate).getMonth()+1}.`:''}${e.note?' · '+esc(e.note):''}</div>`:''}</div></div>`).join('')}
+      <button class="addday" data-d="${k}">+ Termin</button></div></div>`; }).join('')}</div>
+    <div class="legend"><span><i style="background:var(--uns)"></i>bei uns</span><span><i style="background:var(--gil)"></i>bei Gil</span><span><i style="background:var(--beide)"></i>beide</span><span><i style="background:var(--oma)"></i>Oma & Opa</span><span><i style="background:var(--schule)"></i>Schule</span><span><i style="background:var(--logo)"></i>Logopädie</span></div>`;
+  $('#calPrev',m).onclick=()=>{ S.calWeek=addDays(ws,-7); render(); };
+  $('#calNext',m).onclick=()=>{ S.calWeek=addDays(ws,7); render(); };
+  if($('#calNow',m)) $('#calNow',m).onclick=()=>{ S.calWeek=mondayOf(new Date()); render(); };
+  m.querySelectorAll('.addday').forEach(b=>b.onclick=()=>eventSheet(null,b.dataset.d));
+  m.querySelectorAll('.ev').forEach(r=>r.onclick=()=>eventSheet(S.events.find(e=>e.id===r.dataset.id)));
+}
+function eventSheet(e, date){
+  const isNew=!e; e = e || {title:'', date:date||today(), endDate:'', time:'', endTime:'', person:'all', note:''};
+  let p=e.person;
+  const sh=openSheet(`<h3>${isNew?'Neuer Termin':'Termin bearbeiten'}</h3>
+    <label class="f">Titel</label><input id="t" value="${esc(e.title)}" placeholder="z. B. Zahnarzt">
+    <label class="f">Wer</label>${personChips(p)}
+    <div class="two"><div><label class="f">Datum</label><input type="date" id="d" value="${e.date}"></div><div><label class="f">Bis (optional)</label><input type="date" id="de" value="${e.endDate||''}"></div></div>
+    <div class="two"><div><label class="f">Uhrzeit (leer = ganztägig)</label><input type="time" id="ti" value="${e.time||''}"></div><div><label class="f">Ende</label><input type="time" id="te" value="${e.endTime||''}"></div></div>
+    <label class="f">Notiz</label><input id="n" value="${esc(e.note||'')}" placeholder="optional">
+    <div class="actions"><button class="btn" id="save">Speichern</button>${isNew?'':'<button class="btn danger" id="del">Termin löschen</button>'}</div>`);
+  bindChips($('#pchips',sh),'p',v=>p=v);
+  $('#save',sh).onclick=async()=>{ const title=$('#t',sh).value.trim(); if(!title) return $('#t',sh).focus();
+    const data={title, date:$('#d',sh).value||today(), endDate:$('#de',sh).value||'', time:$('#ti',sh).value||'', endTime:$('#te',sh).value||'', person:p, note:$('#n',sh).value.trim(), updatedAt:Date.now()};
+    if(data.endDate && data.endDate<data.date) data.endDate='';
+    await store.set('events', e.id||uid(), isNew?{...data,createdAt:Date.now()}:{...e,...data}); closeSheet(); };
+  if($('#del',sh)) $('#del',sh).onclick=async()=>{ if(confirm('Termin löschen?')){ await store.remove('events',e.id); closeSheet(); } };
+  if(isNew) setTimeout(()=>$('#t',sh).focus(),250);
+}
+
+/* ========================= Einkauf (pro KW) ========================= */
+function renderShop(m){
+  const wk=weekKey(S.planWeek); const items=S.shopping.filter(i=>i.week===wk);
+  const open=items.filter(i=>!i.done).sort((a,b)=>a.createdAt-b.createdAt), done=items.filter(i=>i.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const isPlan = ymd(S.planWeek)===ymd(planWeekStart());
+  const row=i=>`<div class="item ${i.done?'done':''}" data-id="${i.id}"><button class="check" data-toggle>${i.done?'✓':''}</button><div class="name" data-edit>${esc(i.name)}</div></div>`;
+  m.innerHTML = weekNav(S.planWeek,'shop', isPlan && new Date().getDay()===0 ? ' · Planung bis 18 Uhr':'') + `
+    <form class="addrow" id="addForm"><input id="newItem" placeholder="Was fehlt? (mehrere mit Komma)" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
+    <div class="card" style="padding:2px 16px">${open.length?open.map(row).join(''):`<div class="empty">Noch nichts auf der Liste</div>`}</div>
+    ${done.length?`<div class="row" style="margin:18px 4px 6px"><h2 class="grow" style="margin:0">Erledigt (${done.length})</h2><button class="small" style="color:var(--accent);font-weight:600" id="clearDone">Aufräumen</button></div><div class="card" style="padding:2px 16px">${done.map(row).join('')}</div>`:''}
+    ${(()=>{ const prev=weekKey(addDays(S.planWeek,-7)); const carry=S.shopping.filter(i=>i.week===prev&&!i.done); return carry.length?`<div style="margin-top:14px"><button class="btn ghost" id="carry">${carry.length} offene Artikel aus der Vorwoche übernehmen</button></div>`:''; })()}`;
+  $('#shopPrev',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,-7); render(); };
+  $('#shopNext',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,7); render(); };
+  if($('#shopNow',m)) $('#shopNow',m).onclick=()=>{ S.planWeek=mondayOf(new Date()); render(); };
+  $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newItem',m); const v=inp.value; inp.value='';
+    for (const part of v.split(',')){ const name=part.trim(); if(!name) continue; await store.set('shopping', uid(), {name, week:wk, done:false, createdAt:Date.now()}); } inp.focus(); };
+  m.querySelectorAll('.item').forEach(r=>{ const it=S.shopping.find(i=>i.id===r.dataset.id);
+    r.querySelector('[data-toggle]').onclick=()=>store.update('shopping',it.id,{done:!it.done, doneAt:Date.now()});
+    r.querySelector('[data-edit]').onclick=()=>simpleSheet('Artikel', it.name, async name=>store.update('shopping',it.id,{name}), ()=>store.remove('shopping',it.id)); });
+  if($('#clearDone',m)) $('#clearDone',m).onclick=async()=>{ for (const i of done) await store.remove('shopping',i.id); };
+  if($('#carry',m)) $('#carry',m).onclick=async()=>{ const prev=weekKey(addDays(S.planWeek,-7)); for (const i of S.shopping.filter(x=>x.week===prev&&!x.done)) await store.update('shopping',i.id,{week:wk}); toast('Übernommen'); };
+}
+function simpleSheet(title, value, onSave, onDelete, placeholder=''){
+  const sh=openSheet(`<h3>${esc(title)}</h3><input id="v" value="${esc(value)}" placeholder="${esc(placeholder)}"><div class="actions"><button class="btn" id="save">Speichern</button>${onDelete?'<button class="btn danger" id="del">Löschen</button>':''}</div>`);
+  $('#save',sh).onclick=async()=>{ const v=$('#v',sh).value.trim(); if(!v) return; await onSave(v); closeSheet(); };
+  if(onDelete) $('#del',sh).onclick=async()=>{ await onDelete(); closeSheet(); };
+  setTimeout(()=>$('#v',sh).focus(),250);
+}
+
+/* ========================= Essensplan (pro KW) ========================= */
+function renderMeals(m){
+  const wk=weekKey(S.planWeek); const meals=S.meals.filter(x=>x.week===wk).sort((a,b)=>a.createdAt-b.createdAt);
+  const row=x=>`<div class="item ${x.done?'done':''}" data-id="${x.id}"><button class="check" data-toggle>${x.done?'✓':''}</button><div class="name" data-edit>${esc(x.title)}</div></div>`;
+  m.innerHTML = weekNav(S.planWeek,'meals') + `
+    <form class="addrow" id="addForm"><input id="newMeal" placeholder="Gericht für diese Woche" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
+    <div class="card" style="padding:2px 16px">${meals.length?meals.map(row).join(''):`<div class="empty">Noch nichts geplant</div>`}</div>
+    <p class="small muted" style="text-align:center;margin-top:12px">Haken = schon gekocht</p>`;
+  $('#mealsPrev',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,-7); render(); };
+  $('#mealsNext',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,7); render(); };
+  if($('#mealsNow',m)) $('#mealsNow',m).onclick=()=>{ S.planWeek=mondayOf(new Date()); render(); };
+  $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newMeal',m); const v=inp.value.trim(); inp.value=''; if(!v) return; await store.set('meals', uid(), {title:v, week:wk, done:false, createdAt:Date.now()}); inp.focus(); };
+  m.querySelectorAll('.item').forEach(r=>{ const x=S.meals.find(i=>i.id===r.dataset.id);
+    r.querySelector('[data-toggle]').onclick=()=>store.update('meals',x.id,{done:!x.done});
+    r.querySelector('[data-edit]').onclick=()=>simpleSheet('Gericht', x.title, async title=>store.update('meals',x.id,{title}), ()=>store.remove('meals',x.id)); });
+}
+
+/* ========================= Push ========================= */
+async function enablePush(btn){
+  const cfg=window.FAMILY_FIREBASE_CONFIG||{};
+  if (store.kind!=='cloud') return toast('Erst Firebase einrichten');
+  if (!cfg.vapidKey) return toast('vapidKey fehlt in firebase-config.js');
+  if (!('Notification' in window) || !('PushManager' in window)) return toast('Auf dem iPhone: erst „Zum Home-Bildschirm“, dann hier aktivieren');
+  try {
+    btn.disabled=true; btn.textContent='…';
+    const perm = await Notification.requestPermission();
+    if (perm!=='granted') { btn.disabled=false; btn.textContent='Erinnerungen aktivieren'; return toast('Nicht erlaubt'); }
+    const msg = await import(FB_BASE+'firebase-messaging.js');
+    const reg = await navigator.serviceWorker.ready;
+    const token = await msg.getToken(msg.getMessaging(store.app), { vapidKey: cfg.vapidKey, serviceWorkerRegistration: reg });
+    await store.set('pushTokens', token.slice(-40).replace(/[^a-zA-Z0-9_-]/g,'_'), { token, ua: navigator.userAgent.slice(0,120), createdAt: Date.now() });
+    localStorage.setItem('pushOn','1'); toast('Erinnerungen aktiv'); render();
+  } catch(e){ console.error(e); btn.disabled=false; btn.textContent='Erinnerungen aktivieren'; toast('Fehler: '+(e.code||e.message)); }
+}
+
+/* ========================= Mehr ========================= */
+function renderMore(m){
+  const pushOn = localStorage.getItem('pushOn')==='1' && typeof Notification!=='undefined' && Notification.permission==='granted';
+  m.innerHTML=`
+  <h2>Erinnerungen</h2>
+  <div class="card"><div class="small muted" style="margin-bottom:10px">Sonntags 12 Uhr und 18 Uhr: Push zur Einkaufsliste für die kommende Woche.</div>
+    ${pushOn?`<div class="row"><i class="dot" style="background:var(--ok)"></i><b>Aktiv auf diesem Gerät</b></div>`:`<button class="btn" id="push">Erinnerungen aktivieren</button>`}</div>
+  <h2>Personen</h2>
+  <div>${persons().map(p=>`<button class="list-btn" data-p="${p.id}"><span class="row"><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</span><span class="chev">›</span></button>`).join('')}<button class="list-btn" id="addP" style="color:var(--accent)">+ Person hinzufügen</button></div>
+  <h2>Liams Plan</h2>
+  <div class="card small">${S.liamCloud.length?`<b>${S.liamCloud.length} Tage</b> aus der Tabelle „Planung Liam“ synchronisiert.`:`Eingebauter Stand der Tabelle „Planung Liam“ (${Object.keys(S.liam).length} Tage). Aktualisierung läuft über <code>tools/liam_sync.py</code>.`}</div>
+  <h2>Verbindung</h2>
+  <div class="card small">${store.kind==='cloud'?`<b>Firebase verbunden.</b> Echtzeit-Sync zwischen allen Geräten, offline nutzbar.`:`<b>Demo-Modus.</b> Daten nur auf diesem Gerät. Für Sync und Push in <code>firebase-config.js</code> die Firebase-Daten eintragen (README).`}</div>
+  <h2>Installieren</h2>
+  <div class="card small">In Safari: Teilen → <b>„Zum Home-Bildschirm“</b>. Push-Erinnerungen funktionieren nur in der installierten App.</div>
+  <p class="small muted" style="text-align:center;margin-top:30px">Familien-App · v1.1</p>`;
+  if($('#push',m)) $('#push',m).onclick=()=>enablePush($('#push',m));
+  m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>personSheet(person(b.dataset.p)));
+  $('#addP',m).onclick=()=>personSheet(null);
+}
+function personSheet(p){
+  const isNew=!p; p=p||{id:uid(),name:'',color:COLORS[persons().length%COLORS.length]}; let color=p.color;
+  const sh=openSheet(`<h3>${isNew?'Neue Person':'Person'}</h3><label class="f">Name</label><input id="n" value="${esc(p.name)}"><label class="f">Farbe</label><div class="swatches">${COLORS.map(c=>`<button data-c="${c}" style="background:${c}" class="${c===color?'on':''}"></button>`).join('')}</div>
+    <div class="actions"><button class="btn" id="save">Speichern</button>${isNew||persons().length<=1?'':'<button class="btn danger" id="del">Entfernen</button>'}</div>`);
+  sh.querySelectorAll('.swatches button').forEach(b=>b.onclick=()=>{ sh.querySelectorAll('.swatches button').forEach(z=>z.classList.remove('on')); b.classList.add('on'); color=b.dataset.c; });
+  const savePersons=list=>store.set('settings','main',{...(S.settings||{}), persons:list});
+  $('#save',sh).onclick=async()=>{ const name=$('#n',sh).value.trim(); if(!name) return; const list=persons().map(x=>({...x})); const i=list.findIndex(x=>x.id===p.id); if(i>=0) list[i]={...list[i],name,color}; else list.push({id:p.id,name,color}); await savePersons(list); closeSheet(); };
+  if($('#del',sh)) $('#del',sh).onclick=async()=>{ await savePersons(persons().filter(x=>x.id!==p.id)); closeSheet(); };
+}
+
+/* ========================= Router / Boot ========================= */
+const TITLES={cal:'Kalender',shop:'Einkauf',meals:'Essensplan',more:'Mehr'};
+const VIEWS={cal:renderCal, shop:renderShop, meals:renderMeals, more:renderMore};
+function render(){ const m=$('#main'); $('#title').textContent=TITLES[S.tab];
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  $('#fab').classList.toggle('hidden', S.tab!=='cal'); VIEWS[S.tab](m); }
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; scrollTo(0,0); render(); });
+$('#fab').onclick=()=>eventSheet(null, today()>=ymd(S.calWeek)&&today()<=ymd(addDays(S.calWeek,6))?today():ymd(S.calWeek));
+
+try { S.liam = await (await fetch('liam.json',{cache:'no-cache'})).json(); } catch {}
+store = await initStore();
+const soft=()=>{ const a=document.activeElement; const keep=a&&a.id&&$('#main').contains(a)?{id:a.id,v:a.value,s:a.selectionStart}:null; VIEWS[S.tab]($('#main')); if(keep){ const n=document.getElementById(keep.id); if(n){ n.value=keep.v; n.focus(); try{n.setSelectionRange(keep.s,keep.s)}catch{} } } };
+store.watch('events', d=>{ S.events=d; soft(); });
+store.watch('shopping', d=>{ S.shopping=d; soft(); });
+store.watch('meals', d=>{ S.meals=d; soft(); });
+store.watch('liam', d=>{ S.liamCloud=d; soft(); });
+store.watch('settings', d=>{ S.settings=d.find(x=>x.id==='main')||null; soft(); });
+render();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
