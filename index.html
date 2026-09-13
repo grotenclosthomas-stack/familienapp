@@ -86,7 +86,11 @@ nav.tabs button.on{color:var(--accent)}
 .item.done .check{background:var(--ok);border-color:var(--ok)}
 .item.done .name{text-decoration:line-through;color:var(--muted)}
 .item .name{flex:1;padding:2px 0}
-.item .by{font-size:12px;color:var(--muted)}
+.item .by{font-size:12px;color:var(--muted);display:block}
+.react{display:flex;align-items:center;gap:2px;flex:none;font-size:15px}
+.react .rb{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;opacity:.4}
+.react .rb.on{opacity:1;background:var(--accent-soft)}
+.react > span{margin-right:2px}
 /* Sheet */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
 .overlay.show{opacity:1;pointer-events:auto}
@@ -114,6 +118,7 @@ nav.tabs button.on{color:var(--accent)}
   <button data-tab="cal" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalender</button>
   <button data-tab="shop"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Einkauf</button>
   <button data-tab="meals"><svg viewBox="0 0 24 24"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 0-3 3-3 6v3h3v9"/></svg>Essen</button>
+  <button data-tab="trips"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/><path d="M14 3.5c3 .5 5 3 5 6"/></svg>Reisen</button>
   <button data-tab="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mehr</button>
 </nav>
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
@@ -179,10 +184,12 @@ async function initStore(){
 }
 
 /* ========================= State ========================= */
-const S = { tab:'cal', events:[], shopping:[], meals:[], settings:null, liam:{}, liamCloud:[],
+const S = { tab:'cal', events:[], shopping:[], meals:[], trips:[], settings:null, liam:{}, liamCloud:[],
   calWeek: mondayOf(new Date()), planWeek: planWeekStart() };
 let store;
 const persons = () => S.settings?.persons?.length ? S.settings.persons : DEFAULT_PERSONS;
+const me = () => { try { return localStorage.getItem('me')||''; } catch { return ''; } };
+const byLine = (x) => x.by ? `<span class="by">von ${esc(person(x.by)?.name||x.by)}</span>` : '';
 const person = id => persons().find(p=>p.id===id);
 const liamFor = k => (S.liamCloud.find(x=>x.id===k)) || S.liam[k] || null;
 
@@ -208,36 +215,58 @@ function liamChips(k){
   if (L.note) out.push(`<span class="note">${esc(L.note)}</span>`);
   return `<div class="liam">${out.join('')}</div>`;
 }
+const REPEATS=[['none','Einmalig'],['weekly','Wöchentlich'],['monthly','Monatlich'],['yearly','Jährlich']];
+function occurs(e,k){
+  const r=e.repeat||'none';
+  if (r==='none') return k>=e.date && k<=(e.endDate||e.date);
+  if (k<e.date) return false;
+  const a=parse(e.date), b=parse(k);
+  if (r==='weekly') return a.getDay()===b.getDay();
+  if (r==='monthly') return a.getDate()===b.getDate();
+  if (r==='yearly') return a.getDate()===b.getDate() && a.getMonth()===b.getMonth();
+  return false;
+}
+function liamRides(k){
+  const L=liamFor(k); if(!L || !(L.school||[]).length) return [];
+  const wd=parse(k).getDay(); const sch=L.school[0], last=L.school[L.school.length-1];
+  const who=h=>(L.custody||[]).find(c=>h>=c.from && h<c.to)?.who;
+  const out=[];
+  if (wd===1 && who(Math.max(0,sch.from-1))==='uns') out.push({id:'ride-'+k, title:'Thomas fährt Liam zur Schule', time:pad(sch.from)+':00', person:'thomas', derived:true});
+  if (wd===3 && who(Math.min(23,last.to))==='uns') out.push({id:'ride-'+k, title:'Thomas holt Liam ab', time:pad(last.to)+':00', person:'thomas', derived:true});
+  return out;
+}
 function renderCal(m){
   const ws=S.calWeek, tod=today();
   const days=[...Array(7)].map((_,i)=>addDays(ws,i));
   const sortE=(a,b)=>((a.time||'')+a.title).localeCompare((b.time||'')+b.title);
   m.innerHTML = weekNav(ws,'cal') + `<div class="card" style="padding:2px 14px">${days.map(d=>{ const k=ymd(d);
-    const evs=S.events.filter(e=>k>=e.date && k<=(e.endDate||e.date)).sort(sortE);
+    const evs=[...S.events.filter(e=>occurs(e,k)), ...liamRides(k)].sort(sortE);
     return `<div class="day ${k===tod?'today':''} ${k<tod?'past':''}"><div class="dn"><b>${WD[(d.getDay()+6)%7]}</b><span>${d.getDate()}</span></div><div class="grow">
       ${liamChips(k)}
-      ${evs.map(e=>`<div class="ev" data-id="${e.id}"><div class="bar" style="background:${person(e.person)?.color||'#999'}"></div><div class="t">${e.time?esc(e.time):'ganzt.'}</div><div class="grow"><div class="title">${esc(e.title)}</div>${(e.person!=='all'||e.note||(e.endDate&&e.endDate!==e.date))?`<div class="sub">${e.person==='all'?'':esc(person(e.person)?.name||'')}${e.endDate&&e.endDate!==e.date?` · bis ${parse(e.endDate).getDate()}.${parse(e.endDate).getMonth()+1}.`:''}${e.note?' · '+esc(e.note):''}</div>`:''}</div></div>`).join('')}
+      ${evs.map(e=>`<div class="ev" data-id="${e.id}"><div class="bar" style="background:${person(e.person)?.color||'#999'}"></div><div class="t">${e.time?esc(e.time):'ganzt.'}</div><div class="grow"><div class="title">${esc(e.title)}</div>${(e.person!=='all'||e.note||(e.endDate&&e.endDate!==e.date)||(e.repeat&&e.repeat!=='none'))?`<div class="sub">${e.person==='all'?'':esc(person(e.person)?.name||'')}${e.endDate&&e.endDate!==e.date?` · bis ${parse(e.endDate).getDate()}.${parse(e.endDate).getMonth()+1}.`:''}${e.repeat&&e.repeat!=='none'?' · '+REPEATS.find(x=>x[0]===e.repeat)[1].toLowerCase():''}${e.note?' · '+esc(e.note):''}</div>`:''}</div></div>`).join('')}
       <button class="addday" data-d="${k}">+ Termin</button></div></div>`; }).join('')}</div>
     <div class="legend"><span><i style="background:var(--uns)"></i>bei uns</span><span><i style="background:var(--gil)"></i>bei Gil</span><span><i style="background:var(--beide)"></i>beide</span><span><i style="background:var(--oma)"></i>Oma & Opa</span><span><i style="background:var(--schule)"></i>Schule</span><span><i style="background:var(--logo)"></i>Logopädie</span></div>`;
   $('#calPrev',m).onclick=()=>{ S.calWeek=addDays(ws,-7); render(); };
   $('#calNext',m).onclick=()=>{ S.calWeek=addDays(ws,7); render(); };
   if($('#calNow',m)) $('#calNow',m).onclick=()=>{ S.calWeek=mondayOf(new Date()); render(); };
   m.querySelectorAll('.addday').forEach(b=>b.onclick=()=>eventSheet(null,b.dataset.d));
-  m.querySelectorAll('.ev').forEach(r=>r.onclick=()=>eventSheet(S.events.find(e=>e.id===r.dataset.id)));
+  m.querySelectorAll('.ev').forEach(r=>r.onclick=()=>{ const e=S.events.find(x=>x.id===r.dataset.id); if(e) eventSheet(e); else toast('Automatisch aus Liams Plan (Mo hin / Mi abholen, wenn Liam bei uns ist)'); });
 }
 function eventSheet(e, date){
-  const isNew=!e; e = e || {title:'', date:date||today(), endDate:'', time:'', endTime:'', person:'all', note:''};
-  let p=e.person;
+  const isNew=!e; e = e || {title:'', date:date||today(), endDate:'', time:'', endTime:'', person:'all', note:'', repeat:'none'};
+  let p=e.person, rp=e.repeat||'none';
   const sh=openSheet(`<h3>${isNew?'Neuer Termin':'Termin bearbeiten'}</h3>
     <label class="f">Titel</label><input id="t" value="${esc(e.title)}" placeholder="z. B. Zahnarzt">
     <label class="f">Wer</label>${personChips(p)}
     <div class="two"><div><label class="f">Datum</label><input type="date" id="d" value="${e.date}"></div><div><label class="f">Bis (optional)</label><input type="date" id="de" value="${e.endDate||''}"></div></div>
     <div class="two"><div><label class="f">Uhrzeit (leer = ganztägig)</label><input type="time" id="ti" value="${e.time||''}"></div><div><label class="f">Ende</label><input type="time" id="te" value="${e.endTime||''}"></div></div>
+    <label class="f">Wiederholen</label><div class="chips" id="rchips">${REPEATS.map(([v,l])=>`<button class="chip ${v===rp?'on':''}" data-r="${v}">${l}</button>`).join('')}</div>
     <label class="f">Notiz</label><input id="n" value="${esc(e.note||'')}" placeholder="optional">
     <div class="actions"><button class="btn" id="save">Speichern</button>${isNew?'':'<button class="btn danger" id="del">Termin löschen</button>'}</div>`);
   bindChips($('#pchips',sh),'p',v=>p=v);
+  bindChips($('#rchips',sh),'r',v=>rp=v);
   $('#save',sh).onclick=async()=>{ const title=$('#t',sh).value.trim(); if(!title) return $('#t',sh).focus();
-    const data={title, date:$('#d',sh).value||today(), endDate:$('#de',sh).value||'', time:$('#ti',sh).value||'', endTime:$('#te',sh).value||'', person:p, note:$('#n',sh).value.trim(), updatedAt:Date.now()};
+    const data={title, date:$('#d',sh).value||today(), endDate:$('#de',sh).value||'', time:$('#ti',sh).value||'', endTime:$('#te',sh).value||'', person:p, repeat:rp, note:$('#n',sh).value.trim(), updatedAt:Date.now()};
     if(data.endDate && data.endDate<data.date) data.endDate='';
     await store.set('events', e.id||uid(), isNew?{...data,createdAt:Date.now()}:{...e,...data}); closeSheet(); };
   if($('#del',sh)) $('#del',sh).onclick=async()=>{ if(confirm('Termin löschen?')){ await store.remove('events',e.id); closeSheet(); } };
@@ -249,7 +278,7 @@ function renderShop(m){
   const wk=weekKey(S.planWeek); const items=S.shopping.filter(i=>i.week===wk);
   const open=items.filter(i=>!i.done).sort((a,b)=>a.createdAt-b.createdAt), done=items.filter(i=>i.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const isPlan = ymd(S.planWeek)===ymd(planWeekStart());
-  const row=i=>`<div class="item ${i.done?'done':''}" data-id="${i.id}"><button class="check" data-toggle>${i.done?'✓':''}</button><div class="name" data-edit>${esc(i.name)}</div></div>`;
+  const row=i=>`<div class="item ${i.done?'done':''}" data-id="${i.id}"><button class="check" data-toggle>${i.done?'✓':''}</button><div class="name" data-edit>${esc(i.name)}${byLine(i)}</div></div>`;
   m.innerHTML = weekNav(S.planWeek,'shop', isPlan && new Date().getDay()===0 ? ' · Planung bis 18 Uhr':'') + `
     <form class="addrow" id="addForm"><input id="newItem" placeholder="Was fehlt? (mehrere mit Komma)" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
     <div class="card" style="padding:2px 16px">${open.length?open.map(row).join(''):`<div class="empty">Noch nichts auf der Liste</div>`}</div>
@@ -259,7 +288,7 @@ function renderShop(m){
   $('#shopNext',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,7); render(); };
   if($('#shopNow',m)) $('#shopNow',m).onclick=()=>{ S.planWeek=mondayOf(new Date()); render(); };
   $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newItem',m); const v=inp.value; inp.value='';
-    for (const part of v.split(',')){ const name=part.trim(); if(!name) continue; await store.set('shopping', uid(), {name, week:wk, done:false, createdAt:Date.now()}); } inp.focus(); };
+    for (const part of v.split(',')){ const name=part.trim(); if(!name) continue; await store.set('shopping', uid(), {name, week:wk, done:false, by:me(), createdAt:Date.now()}); } inp.focus(); };
   m.querySelectorAll('.item').forEach(r=>{ const it=S.shopping.find(i=>i.id===r.dataset.id);
     r.querySelector('[data-toggle]').onclick=()=>store.update('shopping',it.id,{done:!it.done, doneAt:Date.now()});
     r.querySelector('[data-edit]').onclick=()=>simpleSheet('Artikel', it.name, async name=>store.update('shopping',it.id,{name}), ()=>store.remove('shopping',it.id)); });
@@ -274,20 +303,66 @@ function simpleSheet(title, value, onSave, onDelete, placeholder=''){
 }
 
 /* ========================= Essensplan (pro KW) ========================= */
+const IDEAS=['Shakshuka mit Feta & Fladenbrot','Thai-Curry mit Süßkartoffel & Limette','Ofen-Lachs auf Zitronen-Fenchel','Birria-Tacos mit Consommé','Pasta al Limone mit Burrata','Koreanisches Bibimbap','Smash Burger mit Karamell-Zwiebeln','Gyros-Blech mit Tzatziki & Ofenkartoffeln','Ramen mit Ajitama-Ei','Ottolenghi-Ofengemüse mit Tahini-Joghurt',
+ 'Cacio e Pepe','Chicken Tikka Masala mit Naan','Poké Bowl mit Lachs & Mango','Pulled-Pork-Burger mit Coleslaw','Vietnamesische Pho','Lachs-Teriyaki mit Sesam-Brokkoli','Griechischer Bauernsalat mit Halloumi','Butter Chicken','Gnocchi in Salbeibutter mit Kürbis','Chili sin Carne mit Avocado',
+ 'Bao Buns mit knusprigem Hähnchen','Spanische Paella','Lasagne Bolognese (Sonntags-Edition)','Falafel-Bowl mit Hummus','Carbonara nach Originalrezept','Steak mit Chimichurri & Ofenkartoffeln','Pad Thai','Blumenkohl-Wings mit Buffalo-Sauce','Miso-Aubergine mit Reis','Käsespätzle mit Röstzwiebeln',
+ 'Fisch-Tacos mit Limetten-Crema','Hähnchen-Shawarma vom Blech','Tomaten-Risotto mit Burrata','Beef Bulgogi','Wraps mit Halloumi & Granatapfel','Pizza vom Blech (selbstgemacht)','Kürbis-Kokos-Suppe mit Ingwer','Saltimbocca mit Zitronen-Pasta','Okonomiyaki','Ofenkartoffel mit Sour Cream & Pulled Chicken'];
+// 10 wechselnde Vorschläge pro KW (aus dem Pool von 40)
+const weekIdeas = wk => { let h=0; for (const ch of wk) h=(h*31+ch.charCodeAt(0))>>>0; const arr=[...IDEAS]; for (let i=arr.length-1;i>0;i--){ h=(h*1103515245+12345)>>>0; const j=h%(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr.slice(0,10); };
+const REACT = {like:'👍', dislike:'👎'};
 function renderMeals(m){
   const wk=weekKey(S.planWeek); const meals=S.meals.filter(x=>x.week===wk).sort((a,b)=>a.createdAt-b.createdAt);
-  const row=x=>`<div class="item ${x.done?'done':''}" data-id="${x.id}"><button class="check" data-toggle>${x.done?'✓':''}</button><div class="name" data-edit>${esc(x.title)}</div></div>`;
+  const rx = x => { const r=x.reactions||{}; const mine=me()&&r[me()]; const others=Object.entries(r).filter(([p])=>p!==me()).map(([p,v])=>`<span title="${esc(person(p)?.name||p)}">${REACT[v]}</span>`).join('');
+    return `<div class="react">${others}<button class="rb ${mine==='like'?'on':''}" data-react="like">👍</button><button class="rb ${mine==='dislike'?'on':''}" data-react="dislike">👎</button></div>`; };
+  const row=x=>`<div class="item ${x.done?'done':''}" data-id="${x.id}"><button class="check" data-toggle>${x.done?'✓':''}</button><div class="name" data-edit>${esc(x.title)}${byLine(x)}</div>${rx(x)}</div>`;
   m.innerHTML = weekNav(S.planWeek,'meals') + `
     <form class="addrow" id="addForm"><input id="newMeal" placeholder="Gericht für diese Woche" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
     <div class="card" style="padding:2px 16px">${meals.length?meals.map(row).join(''):`<div class="empty">Noch nichts geplant</div>`}</div>
-    <p class="small muted" style="text-align:center;margin-top:12px">Haken = schon gekocht</p>`;
+    <p class="small muted" style="text-align:center;margin-top:12px">Haken = schon gekocht</p>
+    <h2>Vorschläge für KW ${isoWeek(S.planWeek).week}</h2><div class="chips" style="flex-wrap:wrap;overflow:visible" id="ideas">${weekIdeas(wk).filter(i=>!meals.some(x=>x.title===i)).map(i=>`<button class="chip" data-idea="${esc(i)}">+ ${esc(i)}</button>`).join('')}</div>`;
+  m.querySelectorAll('[data-idea]').forEach(b=>b.onclick=async()=>{ await store.set('meals', uid(), {title:b.dataset.idea, week:wk, done:false, by:me(), createdAt:Date.now()}); toast('Eingeplant'); });
+  m.querySelectorAll('[data-react]').forEach(b=>b.onclick=async e=>{ e.stopPropagation(); if(!me()) return toast('Erst unter „Mehr“ wählen, wer du bist'); const x=S.meals.find(i=>i.id===b.closest('.item').dataset.id); const r={...(x.reactions||{})}; if(r[me()]===b.dataset.react) delete r[me()]; else r[me()]=b.dataset.react; await store.update('meals',x.id,{reactions:r}); });
   $('#mealsPrev',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,-7); render(); };
   $('#mealsNext',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,7); render(); };
   if($('#mealsNow',m)) $('#mealsNow',m).onclick=()=>{ S.planWeek=mondayOf(new Date()); render(); };
-  $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newMeal',m); const v=inp.value.trim(); inp.value=''; if(!v) return; await store.set('meals', uid(), {title:v, week:wk, done:false, createdAt:Date.now()}); inp.focus(); };
+  $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newMeal',m); const v=inp.value.trim(); inp.value=''; if(!v) return; await store.set('meals', uid(), {title:v, week:wk, done:false, by:me(), createdAt:Date.now()}); inp.focus(); };
   m.querySelectorAll('.item').forEach(r=>{ const x=S.meals.find(i=>i.id===r.dataset.id);
     r.querySelector('[data-toggle]').onclick=()=>store.update('meals',x.id,{done:!x.done});
     r.querySelector('[data-edit]').onclick=()=>simpleSheet('Gericht', x.title, async title=>store.update('meals',x.id,{title}), ()=>store.remove('meals',x.id)); });
+}
+
+/* ========================= Reisen ========================= */
+const TRIP_KINDS=[['mallorca','Mallorca'],['urlaub','Urlaub']];
+const fmtD = s => { const d=parse(s); return `${d.getDate()}.${d.getMonth()+1}.`; };
+const fmtRange = t => t.from ? `${fmtD(t.from)} – ${t.to?fmtD(t.to):'?'} ${parse(t.to||t.from).getFullYear()}` : (t.when||'Termin offen');
+function renderTrips(m){
+  const tod=today();
+  const list=kind=>{ const ts=S.trips.filter(t=>t.kind===kind).sort((a,b)=>(a.from||'9999').localeCompare(b.from||'9999'));
+    const up=ts.filter(t=>!t.to||t.to>=tod), past=ts.filter(t=>t.to&&t.to<tod).reverse();
+    const row=t=>{ const days=t.from&&t.to?Math.round((parse(t.to)-parse(t.from))/86400000)+1:0; const now=t.from&&t.to&&tod>=t.from&&tod<=t.to;
+      return `<div class="ev trip" data-id="${t.id}"><div class="bar" style="background:${t.kind==='mallorca'?'#e0a020':'#14b8a6'}"></div><div class="grow"><div class="title">${esc(t.title||(t.kind==='mallorca'?'Mallorca':'Urlaub'))}${now?' <span class="small" style="color:var(--ok)">· jetzt</span>':''}</div><div class="sub">${fmtRange(t)}${days?` · ${days} Tage`:''}${t.note?' · '+esc(t.note):''}</div></div></div>`; };
+    return (up.length?up.map(row).join(''):`<div class="empty">Nichts geplant</div>`) + (past.length?`<details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Vergangene (${past.length})</summary>${past.map(row).join('')}</details>`:''); };
+  m.innerHTML=`<h2>Mallorca – Zweitwohnung</h2><div class="card">${list('mallorca')}</div>
+    <div style="margin:10px 0 0"><button class="btn ghost" data-new="mallorca">+ Mallorca-Aufenthalt</button></div>
+    <h2>Urlaub</h2><div class="card">${list('urlaub')}</div>
+    <div style="margin:10px 0 0"><button class="btn ghost" data-new="urlaub">+ Urlaub</button></div>`;
+  m.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>tripSheet(null,b.dataset.new));
+  m.querySelectorAll('.trip').forEach(r=>r.onclick=()=>tripSheet(S.trips.find(t=>t.id===r.dataset.id)));
+}
+function tripSheet(t, kind){
+  const isNew=!t; t = t || {kind, title:'', from:'', to:'', when:'', note:''}; let k=t.kind;
+  const sh=openSheet(`<h3>${isNew?'Neue Reise':'Reise bearbeiten'}</h3>
+    <div class="seg" id="kinds">${TRIP_KINDS.map(([v,l])=>`<button data-k="${v}" class="${v===k?'on':''}">${l}</button>`).join('')}</div>
+    <label class="f">Bezeichnung</label><input id="t" value="${esc(t.title||'')}" placeholder="${k==='mallorca'?'z. B. Herbst auf Mallorca':'z. B. Rundtrip Leipzig – Dresden – Prag'}">
+    <div class="two"><div><label class="f">Von</label><input type="date" id="f" value="${t.from||''}"></div><div><label class="f">Bis</label><input type="date" id="to" value="${t.to||''}"></div></div>
+    <label class="f">Falls Datum noch offen: Zeitraum als Text</label><input id="w" value="${esc(t.when||'')}" placeholder="z. B. November 2026">
+    <label class="f">Notiz</label><input id="n" value="${esc(t.note||'')}" placeholder="optional">
+    <div class="actions"><button class="btn" id="save">Speichern</button>${isNew?'':'<button class="btn danger" id="del">Löschen</button>'}</div>`);
+  sh.querySelectorAll('#kinds button').forEach(b=>b.onclick=()=>{ sh.querySelectorAll('#kinds button').forEach(z=>z.classList.remove('on')); b.classList.add('on'); k=b.dataset.k; });
+  $('#save',sh).onclick=async()=>{ const from=$('#f',sh).value, to=$('#to',sh).value; if (to && from && to<from) return toast('„Bis“ liegt vor „Von“');
+    await store.set('trips', t.id||uid(), {kind:k, title:$('#t',sh).value.trim(), from, to, when:$('#w',sh).value.trim(), note:$('#n',sh).value.trim(), createdAt:t.createdAt||Date.now(), updatedAt:Date.now()}); closeSheet(); };
+  if($('#del',sh)) $('#del',sh).onclick=async()=>{ if(confirm('Reise löschen?')){ await store.remove('trips',t.id); closeSheet(); } };
+  if(isNew) setTimeout(()=>$('#t',sh).focus(),250);
 }
 
 /* ========================= Push ========================= */
@@ -315,6 +390,8 @@ function renderMore(m){
   <h2>Erinnerungen</h2>
   <div class="card"><div class="small muted" style="margin-bottom:10px">Sonntags 12 Uhr und 18 Uhr: Push zur Einkaufsliste für die kommende Woche.</div>
     ${pushOn?`<div class="row"><i class="dot" style="background:var(--ok)"></i><b>Aktiv auf diesem Gerät</b></div>`:`<button class="btn" id="push">Erinnerungen aktivieren</button>`}</div>
+  <h2>Ich bin …</h2>
+  <div class="card"><div class="small muted" style="margin-bottom:10px">Damit bei Einkauf und Essen steht, wer etwas eingetragen hat, und du Gerichte bewerten kannst.</div><div class="chips" id="mechips">${persons().map(p=>`<button class="chip ${p.id===me()?'on':''}" data-me="${p.id}"><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</button>`).join('')}</div></div>
   <h2>Personen</h2>
   <div>${persons().map(p=>`<button class="list-btn" data-p="${p.id}"><span class="row"><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</span><span class="chev">›</span></button>`).join('')}<button class="list-btn" id="addP" style="color:var(--accent)">+ Person hinzufügen</button></div>
   <h2>Liams Plan</h2>
@@ -323,8 +400,9 @@ function renderMore(m){
   <div class="card small">${store.kind==='cloud'?`<b>Firebase verbunden.</b> Echtzeit-Sync zwischen allen Geräten, offline nutzbar.`:`<b>Demo-Modus.</b> Daten nur auf diesem Gerät. Für Sync und Push in <code>firebase-config.js</code> die Firebase-Daten eintragen (README).`}</div>
   <h2>Installieren</h2>
   <div class="card small">In Safari: Teilen → <b>„Zum Home-Bildschirm“</b>. Push-Erinnerungen funktionieren nur in der installierten App.</div>
-  <p class="small muted" style="text-align:center;margin-top:30px">Familien-App · v1.1</p>`;
+  <p class="small muted" style="text-align:center;margin-top:30px">Familien-App · v1.4</p>`;
   if($('#push',m)) $('#push',m).onclick=()=>enablePush($('#push',m));
+  m.querySelectorAll('[data-me]').forEach(b=>b.onclick=()=>{ try{ localStorage.setItem('me', b.dataset.me); }catch{} toast(`Hallo ${person(b.dataset.me)?.name}!`); render(); });
   m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>personSheet(person(b.dataset.p)));
   $('#addP',m).onclick=()=>personSheet(null);
 }
@@ -339,8 +417,8 @@ function personSheet(p){
 }
 
 /* ========================= Router / Boot ========================= */
-const TITLES={cal:'Kalender',shop:'Einkauf',meals:'Essensplan',more:'Mehr'};
-const VIEWS={cal:renderCal, shop:renderShop, meals:renderMeals, more:renderMore};
+const TITLES={cal:'Kalender',shop:'Einkauf',meals:'Essensplan',trips:'Reisen',more:'Mehr'};
+const VIEWS={cal:renderCal, shop:renderShop, meals:renderMeals, trips:renderTrips, more:renderMore};
 function render(){ const m=$('#main'); $('#title').textContent=TITLES[S.tab];
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
   $('#fab').classList.toggle('hidden', S.tab!=='cal'); VIEWS[S.tab](m); }
@@ -353,6 +431,7 @@ const soft=()=>{ const a=document.activeElement; const keep=a&&a.id&&$('#main').
 store.watch('events', d=>{ S.events=d; soft(); });
 store.watch('shopping', d=>{ S.shopping=d; soft(); });
 store.watch('meals', d=>{ S.meals=d; soft(); });
+store.watch('trips', d=>{ S.trips=d; soft(); });
 store.watch('liam', d=>{ S.liamCloud=d; soft(); });
 store.watch('settings', d=>{ S.settings=d.find(x=>x.id==='main')||null; soft(); });
 render();
