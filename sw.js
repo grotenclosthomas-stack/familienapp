@@ -1,5 +1,5 @@
 // Service Worker – App-Shell offline + Push-Empfang
-const VERSION = 'famapp-v4';
+const VERSION = 'famapp-v6';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
