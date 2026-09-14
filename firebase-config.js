@@ -12,5 +12,7 @@ window.FAMILY_FIREBASE_CONFIG = {
   storageBucket: "familienapp-f93c7.firebasestorage.app",
   messagingSenderId: "158364623902",
   appId: "1:158364623902:web:942c76fb9d402627f17a0f",
-  vapidKey: "BDCoe99vTPdLXSq43RtFBtrnN5W29EJcCO5ipQiHYK_yb0M0HSxC2brC2zZCaQoiOdsbwu_wnfR1s9AHyiPWMsc"
+  vapidKey: "BDCoe99vTPdLXSq43RtFBtrnN5W29EJcCO5ipQiHYK_yb0M0HSxC2brC2zZCaQoiOdsbwu_wnfR1s9AHyiPWMsc",
+  // Cloudflare Worker für die Rezept-Recherche (siehe worker/worker.js)
+  recipeApi: "https://familienapp-rezepte.ihr-fairer-makler.workers.dev/"
 };
