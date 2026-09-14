@@ -88,6 +88,7 @@ nav.tabs button.on{color:var(--accent)}
 .item.done .name{text-decoration:line-through;color:var(--muted)}
 .item .name{flex:1;padding:2px 0}
 .item .by{font-size:12px;color:var(--muted);display:block}
+.pers{flex:none;font-size:13px;font-weight:600;padding:4px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-right:4px}
 .react{display:flex;align-items:center;gap:2px;flex:none;font-size:15px}
 .react .rb{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;opacity:.4}
 .react .rb.on{opacity:1;background:var(--accent-soft)}
@@ -189,6 +190,7 @@ const S = { tab:'cal', events:[], shopping:[], meals:[], trips:[], settings:null
   calWeek: mondayOf(new Date()), planWeek: planWeekStart() };
 let store;
 const persons = () => S.settings?.persons?.length ? S.settings.persons : DEFAULT_PERSONS;
+const DEFAULT_MEAL_PERSONS = 3;
 const me = () => { try { return localStorage.getItem('me')||''; } catch { return ''; } };
 const byLine = (x) => x.by ? `<span class="by">von ${esc(person(x.by)?.name||x.by)}</span>` : '';
 const person = id => persons().find(p=>p.id===id);
@@ -285,7 +287,7 @@ function renderShop(m){
   m.innerHTML = weekNav(S.planWeek,'shop', isPlan && new Date().getDay()===0 ? ' · Planung bis 18 Uhr':'') + `
     <form class="addrow" id="addForm"><input id="newItem" placeholder="Was fehlt? (mehrere mit Komma)" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
     <div class="card" style="padding:2px 16px">${open.length?open.map(row).join(''):`<div class="empty">Noch nichts auf der Liste</div>`}</div>
-    ${mealOpen.length?`<h2>Für die Gerichte</h2>${Object.entries(byMeal).map(([meal,list])=>`<div class="small" style="font-weight:600;margin:10px 4px 4px">${esc(meal)}</div><div class="card" style="padding:2px 16px">${list.map(row).join('')}</div>`).join('')}`:''}
+    ${mealOpen.length?`<h2>Für die Gerichte</h2>${Object.entries(byMeal).map(([meal,list])=>`<div class="small" style="font-weight:600;margin:10px 4px 4px">${esc(meal)}${list[0].persons?` <span class="muted" style="font-weight:400">· ${list[0].persons} Pers.</span>`:''}</div><div class="card" style="padding:2px 16px">${list.map(row).join('')}</div>`).join('')}`:''}
     ${done.length?`<div class="row" style="margin:18px 4px 6px"><h2 class="grow" style="margin:0">Erledigt (${done.length})</h2><button class="small" style="color:var(--accent);font-weight:600" id="clearDone">Aufräumen</button></div><div class="card" style="padding:2px 16px">${done.map(row).join('')}</div>`:''}
     ${(()=>{ const prev=weekKey(addDays(S.planWeek,-7)); const carry=S.shopping.filter(i=>i.week===prev&&!i.done); return carry.length?`<div style="margin-top:14px"><button class="btn ghost" id="carry">${carry.length} offene Artikel aus der Vorwoche übernehmen</button></div>`:''; })()}`;
   $('#shopPrev',m).onclick=()=>{ S.planWeek=addDays(S.planWeek,-7); render(); };
@@ -319,7 +321,7 @@ function renderMeals(m){
   const confirmed=S.settings?.['confirmed_'+wk]||null;
   const rx = x => { const r=x.reactions||{}; const mine=me()&&r[me()]; const others=Object.entries(r).filter(([p])=>p!==me()).map(([p,v])=>`<span title="${esc(person(p)?.name||p)}">${REACT[v]}</span>`).join('');
     return `<div class="react">${others}<button class="rb ${mine==='like'?'on':''}" data-react="like">👍</button><button class="rb ${mine==='dislike'?'on':''}" data-react="dislike">👎</button></div>`; };
-  const row=x=>`<div class="item ${x.done?'done':''}" data-id="${x.id}"><button class="check" data-toggle>${x.done?'✓':''}</button><div class="name" data-edit>${esc(x.title)}${byLine(x)}</div>${rx(x)}</div>`;
+  const row=x=>`<div class="item ${x.done?'done':''}" data-id="${x.id}"><button class="check" data-toggle>${x.done?'✓':''}</button><div class="name" data-edit>${esc(x.title)}${byLine(x)}</div><button class="pers" data-pers title="Personen">👤 ${mealPersons(x)}</button>${rx(x)}</div>`;
   m.innerHTML = weekNav(S.planWeek,'meals') + `
     <form class="addrow" id="addForm"><input id="newMeal" placeholder="Gericht für diese Woche" autocomplete="off" enterkeyhint="done"><button type="submit">+</button></form>
     <div class="card" style="padding:2px 16px">${meals.length?meals.map(row).join(''):`<div class="empty">Noch nichts geplant</div>`}</div>
@@ -335,7 +337,15 @@ function renderMeals(m){
   $('#addForm',m).onsubmit=async e=>{ e.preventDefault(); const inp=$('#newMeal',m); const v=inp.value.trim(); inp.value=''; if(!v) return; await store.set('meals', uid(), {title:v, week:wk, done:false, by:me(), createdAt:Date.now()}); inp.focus(); };
   m.querySelectorAll('.item').forEach(r=>{ const x=S.meals.find(i=>i.id===r.dataset.id);
     r.querySelector('[data-toggle]').onclick=()=>store.update('meals',x.id,{done:!x.done});
-    r.querySelector('[data-edit]').onclick=()=>simpleSheet('Gericht', x.title, async title=>store.update('meals',x.id,{title}), ()=>store.remove('meals',x.id)); });
+    r.querySelector('[data-edit]').onclick=()=>simpleSheet('Gericht', x.title, async title=>store.update('meals',x.id,{title}), ()=>store.remove('meals',x.id));
+    r.querySelector('[data-pers]').onclick=()=>personsSheet(x); });
+}
+const mealPersons = x => Math.max(1, Number(x.persons)||DEFAULT_MEAL_PERSONS);
+function personsSheet(x){
+  const cur=mealPersons(x);
+  const sh=openSheet(`<h3>${esc(x.title)}</h3><div class="small muted" style="margin-bottom:10px">Für wie viele Personen? Danach richten sich die Zutaten auf der Einkaufsliste.</div>
+    <div class="chips" style="flex-wrap:wrap;overflow:visible">${[1,2,3,4,5,6,8,10].map(n=>`<button class="chip ${n===cur?'on':''}" data-n="${n}">${n} ${n===1?'Person':'Personen'}</button>`).join('')}</div>`);
+  sh.querySelectorAll('[data-n]').forEach(b=>b.onclick=async()=>{ await store.update('meals',x.id,{persons:+b.dataset.n}); closeSheet(); });
 }
 
 /* ========================= Reisen ========================= */
@@ -376,16 +386,21 @@ function tripSheet(t, kind){
 async function confirmWeek(wk, meals){
   const api=(window.FAMILY_FIREBASE_CONFIG||{}).recipeApi;
   if(!api) return toast('Rezept-Dienst noch nicht eingerichtet (recipeApi)');
-  const sh=openSheet(`<h3>Rezepte werden recherchiert …</h3><div class="empty">Für ${meals.length} Gerichte, 3 Personen. Dauert ca. 10–20 Sekunden.</div>`);
-  let res;
+  const sh=openSheet(`<h3>Rezepte werden recherchiert …</h3><div class="empty">Für ${meals.length} Gerichte. Dauert ca. 10–20 Sekunden.</div>`);
+  // Gerichte nach Personenzahl bündeln → eine Anfrage pro Personenzahl
+  const groups={}; meals.forEach(x=>{ const n=mealPersons(x); (groups[n]=groups[n]||[]).push(x.title); });
+  let results=[];
   try {
-    const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dishes:meals.map(x=>x.title),persons:3})});
-    res=await r.json(); if(!r.ok||res.error) throw new Error(res.error||r.status);
+    const parts=await Promise.all(Object.entries(groups).map(async([n,dishes])=>{
+      const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dishes,persons:+n})});
+      const res=await r.json(); if(!r.ok||res.error) throw new Error(res.error||r.status);
+      return (res.results||[]).map(x=>({dish:x.dish, persons:+n, recipe:x.recipe||'', ings:(x.ingredients||[]).map(i=>String(i).trim()).filter(Boolean)}));
+    }));
+    results=parts.flat(); const order=meals.map(x=>x.title); results.sort((a,b)=>order.indexOf(a.dish)-order.indexOf(b.dish));
   } catch(e){ sh.innerHTML=`<div class="handle"></div><h3>Fehler</h3><div class="empty">${esc(String(e.message||e))}</div>`; return; }
-  const results=(res.results||[]).map(x=>({dish:x.dish, recipe:x.recipe||'', ings:(x.ingredients||[]).map(i=>String(i).trim()).filter(Boolean)}));
   sh.innerHTML=`<div class="handle"></div><h3>Zutaten für ${results.length} Gerichte</h3>
-    <div class="small muted" style="margin-bottom:10px">Für 3 Personen · Grundausstattung (Salz, Öl, Gewürze …) ist nicht dabei. Zutaten abwählen, die ihr schon habt.</div>
-    ${results.map((r,ri)=>`<div class="card" style="margin-bottom:10px;padding:10px 14px"><div style="font-weight:700">${esc(r.dish)}</div>${r.recipe&&r.recipe!==r.dish?`<div class="small muted">${esc(r.recipe)}</div>`:''}
+    <div class="small muted" style="margin-bottom:10px">Grundausstattung (Salz, Öl, Gewürze …) ist nicht dabei. Zutaten abwählen, die ihr schon habt.</div>
+    ${results.map((r,ri)=>`<div class="card" style="margin-bottom:10px;padding:10px 14px"><div class="row"><div style="font-weight:700" class="grow">${esc(r.dish)}</div><span class="pers">👤 ${r.persons}</span></div>${r.recipe&&r.recipe!==r.dish?`<div class="small muted">${esc(r.recipe)}</div>`:''}
       ${r.ings.map((ing,ii)=>`<label class="row" style="padding:6px 0;gap:10px"><input type="checkbox" checked data-r="${ri}" data-i="${ii}" style="width:22px;height:22px;margin:0"><span class="grow">${esc(ing)}</span></label>`).join('')||'<div class="small muted">Keine Zutaten gefunden</div>'}</div>`).join('')}
     <div class="actions"><button class="btn" id="toShop">Auf die Einkaufsliste</button></div>`;
   $('#toShop',sh).onclick=async()=>{
@@ -394,7 +409,7 @@ async function confirmWeek(wk, meals){
     for (const it of S.shopping.filter(i=>i.week===wk&&i.group==='meals')) await store.remove('shopping',it.id);
     let n=0, t=Date.now();
     for (const cb of sh.querySelectorAll('input[type=checkbox]:checked')){ const r=results[+cb.dataset.r]; const ing=r.ings[+cb.dataset.i];
-      await store.set('shopping', uid(), {name:ing, week:wk, done:false, group:'meals', meal:r.dish, by:me(), createdAt:t++}); n++; }
+      await store.set('shopping', uid(), {name:ing, week:wk, done:false, group:'meals', meal:r.dish, persons:r.persons, by:me(), createdAt:t++}); n++; }
     await store.update('settings','main',{['confirmed_'+wk]:{at:Date.now(), n, dishes:results.length}});
     closeSheet(); toast(`${n} Zutaten auf der Einkaufsliste`); S.tab='shop'; render();
   };
@@ -435,7 +450,7 @@ function renderMore(m){
   <div class="card small">${store.kind==='cloud'?`<b>Firebase verbunden.</b> Echtzeit-Sync zwischen allen Geräten, offline nutzbar.`:`<b>Demo-Modus.</b> Daten nur auf diesem Gerät. Für Sync und Push in <code>firebase-config.js</code> die Firebase-Daten eintragen (README).`}</div>
   <h2>Installieren</h2>
   <div class="card small">In Safari: Teilen → <b>„Zum Home-Bildschirm“</b>. Push-Erinnerungen funktionieren nur in der installierten App.</div>
-  <p class="small muted" style="text-align:center;margin-top:30px">Familien-App · v1.5</p>`;
+  <p class="small muted" style="text-align:center;margin-top:30px">Familien-App · v1.6</p>`;
   if($('#push',m)) $('#push',m).onclick=()=>enablePush($('#push',m));
   m.querySelectorAll('[data-me]').forEach(b=>b.onclick=()=>{ try{ localStorage.setItem('me', b.dataset.me); }catch{} toast(`Hallo ${person(b.dataset.me)?.name}!`); render(); });
   m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>personSheet(person(b.dataset.p)));
