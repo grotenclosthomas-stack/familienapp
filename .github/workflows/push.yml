@@ -2,14 +2,20 @@ name: Einkaufslisten-Erinnerung
 
 on:
   schedule:
-    # Sonntags 12:00 und 18:00 Uhr Berlin. Cron ist UTC, deshalb je zwei Slots (Sommer-/Winterzeit);
-    # das Script prueft selbst, ob es in Berlin gerade 12 oder 18 Uhr ist.
+    # Sonntags 12:00 und 18:00 Uhr Berlin – Cron ist UTC, deshalb je zwei Slots (Sommer-/Winterzeit);
+    # das Script prüft selbst, ob es in Berlin gerade 12 oder 18 Uhr ist.
     - cron: '0 10,11,16,17 * * 0'
   workflow_dispatch:
     inputs:
       slot:
-        description: 'test | 12 | 18'
+        description: 'test | 12 | 18 | nachricht'
         default: 'test'
+      title:
+        description: 'Titel (nur bei slot=nachricht)'
+        default: 'Familie'
+      body:
+        description: 'Text (nur bei slot=nachricht)'
+        default: ''
 
 jobs:
   push:
@@ -24,3 +30,5 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           APP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           SLOT: ${{ github.event.inputs.slot }}
+          TITLE: ${{ github.event.inputs.title }}
+          BODY: ${{ github.event.inputs.body }}
