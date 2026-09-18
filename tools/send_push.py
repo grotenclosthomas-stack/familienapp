@@ -33,7 +33,9 @@ docs = requests.get(f'{FS}/shopping?pageSize=300', headers=H, timeout=30).json()
 open_items = sum(1 for d in docs if d['fields'].get('week', {}).get('stringValue') == week_key
                  and not d['fields'].get('done', {}).get('booleanValue', False))
 artikel = '1 Artikel' if open_items == 1 else f'{open_items} Artikel'
-if SLOT == 'test':
+if SLOT == 'nachricht':  # Freitext aus dem Workflow-Formular
+    title, body = os.environ.get('TITLE') or 'Familie', os.environ.get('BODY') or ''
+elif SLOT == 'test':
     title, body = 'Test 🎉', 'Push-Erinnerungen funktionieren.'
 elif int(SLOT) < 15:
     title, body = f'Einkaufsliste KW {kw}', f'Bis 18 Uhr eintragen, was nächste Woche fehlt – aktuell {artikel}.'
